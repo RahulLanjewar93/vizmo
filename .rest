@@ -1,0 +1,34 @@
+###
+GET http://localhost:3000/floors
+
+###
+GET http://localhost:3000/floors/seed
+
+###
+GET http://localhost:3000/floors/61fa4bbc23cdf11c97a261f5/seats
+
+###
+POST http://localhost:3000/floors/61fa4bbc23cdf11c97a261f5/seats/block
+Content-Type: application/json
+
+{
+    "seatNumbers":[1,2,5],
+    "seatIds":["61fa4bbc23cdf11c97a261f6","61fa4bbc23cdf11c97a261f8","61fa4bbc23cdf11c97a261fc"]
+}
+###
+POST http://localhost:3000/floors/61fa4bbc23cdf11c97a261f5/seats/verify
+Content-Type: application/json
+{
+
+}
+###
+GET http://localhost:3000/floors/61fa4bbc23cdf11c97a261f5/seats/book
+
+###
+POST http://localhost:3000/floors/61fa4bbc23cdf11c97a261f5/seats/timeout
+Content-Type: application/json
+
+{
+    "seatNumbers":[1,2,3],
+    "seatIds":["61fa4bbc23cdf11c97a261f6"]
+}
