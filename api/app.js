@@ -6,22 +6,18 @@ const routes = require('./routes')
 const app = express()
 
 
-// Accept incoming json and url encoded requests other than strings
+// Accept incoming json and url encoded requests
 app.use(express.json())
-app.use(express.urlencoded({
-    extended: true
-}))
+app.use(express.urlencoded({extended: true}))
 
 
 // Route different paths
 app.use('/floors', routes.floors)
 
-// If api not found return a
+// If api not found return not found error
 app.all('*', (req, res) => {
     res.send('Requested URL not found at server').status(404)
 })
-
-// DB is intialized (because we imported config) so listen on app
 
 app.listen(config.port, (err) => {
     if (err) {

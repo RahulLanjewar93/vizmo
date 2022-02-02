@@ -37,10 +37,6 @@ const floorControllers = {
         }
     },
 
-    verifyUserSelectedSeatsAvailable:(req,res)=>{
-
-    },
-
     // Block the seats for the current user
     blockUserSelectedSeats:async (req,res)=>{
         try{
@@ -48,7 +44,7 @@ const floorControllers = {
             const {seatIds} = req.body
 
             //Check for floorId and seats
-            if(!seatIds || !floorId){
+            if(!seatIds || !floorId.length){
                 return res.status(404).json({error:"Send correct floor ID & seat IDs"})
             }
 
@@ -64,7 +60,7 @@ const floorControllers = {
                     let d1 = new Date(seat.blockedTill)
                     if(d1 >= d2){
                         const timeout = Math.floor(Math.abs(d1-d2)/(1000*60)*100)/100
-                        return res.status(404).json({"success":false,"message":"The slot is already booked please try another slot",seat:seat,timeNow:currentDateTime,timeout})
+                        return res.status(404).json({"success":false,"message":"The slot is already blocked please try another slot",seat:seat,timeNow:currentDateTime,timeout})
                     }
                 }
             }
@@ -84,8 +80,46 @@ const floorControllers = {
             return res.status(500).json({error:'Some server error'})
         }
     },
-    bookUserSelectedSeat:(req,res)=>{
+    bookUserSelectedSeat:async (req,res)=>{
+        try{
+            const {floorId} = req.params
+            const {seatIds} = req.body
 
+            //Check for floorId and seats
+            if(!seatIds || !floorId.length){
+                return res.status(404).json({error:"Send correct floor ID & seat IDs"})
+            }
+
+            // Get Current Date Time
+            const currentDateTime = new Date()
+
+
+            for(let seatId of seatIds){
+                const seat = await Seat.findById(seatId)
+                if(seat && seat.bookedTill){
+                    let d2 = new Date(currentDateTime)
+                    let d1 = new Date(seat.bookedTill)
+                    if(d1 >= d2){
+                        const timeout = Math.floor(Math.abs(d1-d2)/(1000*60)*100)/100
+                        return res.status(404).json({"success":false,"message":"The slot is already booked please try another slot",seat:seat,timeNow:currentDateTime,timeout})
+                    }
+                }
+            }
+
+            // Add 5 minutes to current datetime
+            const bookedTill = new Date(currentDateTime)
+            bookedTill.setMinutes(bookedTill.getMinutes()+req.body.time)
+            const seatsPromises = seatIds.map(seatId => {
+                const seat =  Seat.updateMany({"_id":seatId},{$set:{"bookedTill":bookedTill}},{upsert:true})
+                return seat
+            })
+            Promise.all(seatsPromises).then(data=>{
+                res.status(200).json({"sucess":true,"message":data})
+            })
+        }catch(error){
+            console.log(error)
+            return res.status(500).json({error:'Some server error'})
+        }
     },
     getTimeoutForUserSelectedSeats:async (req,res)=>{
         const {floorId} = req.params
@@ -137,7 +171,7 @@ const floorControllers = {
             floor.save()
         }
 
-        res.send('Done')
+        res.status(200).json({success:true})
     }
 }
 
