@@ -1,10 +1,14 @@
 // Intiailze express and import defaults.
+const ParseServer = require('parse-server').ParseServer;
 const express = require('express')
 const config = require('./config')
 const routes = require('./routes')
 
 const app = express()
 
+const mountPath = process.env.PARSE_MOUNT || '/parse';
+const api = new ParseServer(config.parse);
+app.use(mountPath, api);
 
 // Accept incoming json and url encoded requests
 app.use(express.json())
