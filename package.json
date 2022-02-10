@@ -15,6 +15,7 @@
     "dotenv": "^15.0.0",
     "express": "^4.17.2",
     "mongoose": "^6.1.9",
+    "nvm": "^0.0.4",
     "parse": "^3.4.1",
     "parse-server": "^4.10.4"
   }

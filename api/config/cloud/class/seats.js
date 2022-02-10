@@ -10,9 +10,6 @@ async function seed(req){
     for(let i=1;i<=5;i++){
         const Floor = Parse.Object.extend("Floor");
         const floor = new Floor()
-        const floorData = {
-            floorNumber:i
-        }
         for(let j=1;j<=5;j++){
             const Seat = Parse.Object.extend("Seat")
             const seat = new Seat()
@@ -20,9 +17,12 @@ async function seed(req){
             const seatData = {
                 seatNumber:j
             }
-
             await seat.save(seatData)
         }
+        const floorData = {
+            floorNumber:i
+        }
+        await floor.save(floorData)
     }
     return true
 };
@@ -31,7 +31,8 @@ async function getSeats(req){
     const floorId = req.params.floorId
     const Seat = Parse.Object.extend("Seat")
     const query = new Parse.Query(Seat)
-    const data = query.equalTo("parent",floorId)
+    query.equalTo("parent",floorId)
+    const data = await query.find()
     return data
 }
 
