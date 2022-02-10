@@ -1,3 +1,5 @@
+const { query } = require("express");
+
 Parse.Cloud.define("seed",seed);
 Parse.Cloud.define("getSeats",getSeats);
 Parse.Cloud.define("getFloors",getFloors);
@@ -28,12 +30,27 @@ async function seed(req){
 };
 
 async function getSeats(req){
+    // Get FloorId
     const floorId = req.params.floorId
+
+    const Floor = Parse.Object.extend("Floor")
+    const floorQuery = new Parse.Query(Floor)
+    const floor = await floorQuery.get(floorId)
+    const floorNumber = floor.get("floorNumber")
+
     const Seat = Parse.Object.extend("Seat")
-    const query = new Parse.Query(Seat)
-    query.equalTo("parent",floorId)
-    const data = await query.find()
-    return data
+    const seatQuery = new Parse.Query(Seat)
+    seatQuery.equalTo("parent",floor)
+    const data = await seatQuery.find()
+
+    const result = data.map((object,index)=>{
+        return {
+            id:object.id,
+            seatNumber:object.get('seatNumber'),
+            floorNumber:floorNumber
+        }
+    })
+    return result
 }
 
 async function getFloors(req){
