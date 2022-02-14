@@ -25,7 +25,6 @@ async function signup(req: Parse.Cloud.FunctionRequest): Promise<any> {
 
     if (!result.success) {
         return flattenZodError(result.error)
-
     }
 
     const signupData = result.data;
@@ -38,7 +37,7 @@ async function signup(req: Parse.Cloud.FunctionRequest): Promise<any> {
     try {
         await Parse.User.signUp(signupData.email, signupData.password, userData, { useMasterKey: true })
         const user = await Parse.User.logIn(signupData.email, signupData.password)
-        return user.getSessionToken()
+        return { sessionToken: user.getSessionToken() }
     } catch (error: any) {
         return {
             success: false,

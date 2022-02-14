@@ -17,7 +17,7 @@ const parseConfig = {
     serverURL: process.env.SERVER_URL || 'http://localhost:1337/parse',
     liveQuery: {
         classNames: ['Posts', 'Comments'], // List of classes to support for query subscriptions
-    },
+    }
 };
 module.exports = {
     port: process.env.PORT,

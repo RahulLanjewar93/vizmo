@@ -61,7 +61,7 @@ function signup(req) {
         try {
             yield Parse.User.signUp(signupData.email, signupData.password, userData, { useMasterKey: true });
             const user = yield Parse.User.logIn(signupData.email, signupData.password);
-            return user.getSessionToken();
+            return { sessionToken: user.getSessionToken() };
         }
         catch (error) {
             return Object.assign({ success: false, details: null }, error);
