@@ -1,35 +1,35 @@
-const { query } = require("express");
+// Types Declarations
+Parse.Cloud.define("seed", seed);
+Parse.Cloud.define("getSeats", getSeats);
+Parse.Cloud.define("getFloors", getFloors);
 
-Parse.Cloud.define("seed",seed);
-Parse.Cloud.define("getSeats",getSeats);
-Parse.Cloud.define("getFloors",getFloors);
+async function seed(req: Parse.Cloud.FunctionRequest): Promise<Boolean> {
 
-async function seed(req){
     const FloorClass = new Parse.Schema("Floor");
     const SeatClass = new Parse.Schema("Seat");
     await FloorClass.purge()
     await SeatClass.purge()
-    for(let i=1;i<=5;i++){
+    for (let i = 1; i <= 5; i++) {
         const Floor = Parse.Object.extend("Floor");
         const floor = new Floor()
-        for(let j=1;j<=5;j++){
+        for (let j = 1; j <= 5; j++) {
             const Seat = Parse.Object.extend("Seat")
             const seat = new Seat()
-            seat.set("parent",floor)
+            seat.set("parent", floor)
             const seatData = {
-                seatNumber:j
+                seatNumber: j
             }
             await seat.save(seatData)
         }
         const floorData = {
-            floorNumber:i
+            floorNumber: i
         }
         await floor.save(floorData)
     }
     return true
 };
 
-async function getSeats(req){
+async function getSeats(req: Parse.Cloud.FunctionRequest): Promise<Object> {
     // Get FloorId
     const floorId = req.params.floorId
 
@@ -40,20 +40,20 @@ async function getSeats(req){
 
     const Seat = Parse.Object.extend("Seat")
     const seatQuery = new Parse.Query(Seat)
-    seatQuery.equalTo("parent",floor)
-    const data = await seatQuery.find()
+    seatQuery.equalTo("parent", floor)
+    const data = await seatQuery.find({ useMasterKey: true })
 
-    const result = data.map((object,index)=>{
+    const result = data.map((object, index) => {
         return {
-            id:object.id,
-            seatNumber:object.get('seatNumber'),
-            floorNumber:floorNumber
+            id: object.id,
+            seatNumber: object.get('seatNumber'),
+            floorNumber: floorNumber
         }
     })
     return result
 }
 
-async function getFloors(req){
+async function getFloors(req: Parse.Cloud.FunctionRequest): Promise<Object> {
     const Floor = Parse.Object.extend("Floor")
     const query = new Parse.Query(Floor)
     const floors = await query.findAll()
