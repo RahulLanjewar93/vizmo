@@ -2,12 +2,12 @@ import * as z from 'zod'
 import { flattenZodError } from '../common/zod';
 
 // Types Declarations
-Parse.Cloud.define("seat:seed", seed);
+// Parse.Cloud.define("seat:seed", seed);
 Parse.Cloud.define("seats:get", getSeats);
 Parse.Cloud.define("seats:block", blockSeats);
 Parse.Cloud.define("seats:book", bookSeats);
 Parse.Cloud.define("seats:timeout", getTimeout)
-Parse.Cloud.define("floors:get", getFloors);
+// Parse.Cloud.define("floors:get", getFloors);
 
 async function seed(req: Parse.Cloud.FunctionRequest): Promise<Object> {
 
@@ -103,26 +103,3 @@ async function getTimeout() {
 }
 
 
-async function blockCheck() {
-    console.log('\n\n BLOCK CHECK CALLED \n\n')
-    const query = new Parse.Query('Seat').exists('blockedTill')
-    const result = await query.findAll()
-
-    // Get blockedTill Value of each seat
-    result.forEach(element => {
-        const { blockedTill, bookedTill } = element.attributes
-        let currentDateTime = new Date()
-
-        // Blocking has expired
-        if (blockedTill < currentDateTime) {
-            console.log(`\n\n CLEARING BLOCK TIME FOR SEAT ${element.id}\n\n`)
-            element.unset("blockedTill")
-            element.save()
-        }
-
-
-    });
-}
-
-// Check blocked items evert
-const clearblockInterval = setInterval(blockCheck, 10000)

@@ -35,7 +35,7 @@ class CustomParseClientApp {
         return await Parse.Cloud.run('login',{
             email:"rahullanjewar93@gmail.com",
             password:"12345678"
-        }).then(data => {
+        }).then(async (data) => {
             console.log('inside then',data)
             await Parse.User.become(data.sessionToken)
         }).catch(err=>console.log('from catch',{message:err.message,code:err.code}))
@@ -47,15 +47,32 @@ class CustomParseClientApp {
     }
 
 
-    async blockSeats(){
-        return await Parse.Cloud.run("seats:block",{seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]}).then(data=>console.log(data))
+    async blockSeats(arg){
+        return await Parse.Cloud.run("seats:block",{seatIds:arg.seatIds}).then(data=>console.log(data))
+    }
+
+    async startCheck(){
+        return await Parse.Cloud.run("check:start").then(data=>console.log(data))
+    }
+
+    async stopCheck(){
+        return await Parse.Cloud.run("check:stop").then(data=>console.log(data))
     }
 }
 
-const newClient = new CustomParseClientApp()
-newClient.login()
 
-newClient.blockSeats()
+// User 1
+const client1 = new CustomParseClientApp()
+// client1.login()
+// client1.blockSeats({seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]})
+setTimeout(client1.startCheck,5000)
+setTimeout(client1.stopCheck,10000)
+
+// User 2
+const client2 = new CustomParseClientApp()
+client2.login()
+client2.blockSeats({seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]})
+
 
 
 
