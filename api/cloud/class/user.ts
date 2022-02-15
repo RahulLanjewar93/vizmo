@@ -1,30 +1,39 @@
-import { flattenZodError, User } from '../common/zod'
+import { flattenZodError } from '../common/zod'
 import * as z from 'zod'
 import * as MailChecker from 'mailchecker'
-import { customReturn } from '../common/returns'
+
+const userSchema = z.strictObject({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email()
+        .refine(val => MailChecker.isValid(val))
+        .transform(val => val.toLocaleLowerCase()),
+    password: z.string().min(8),
+})
+
+export type User = z.infer<typeof userSchema>
 
 async function signup(req: Parse.Cloud.FunctionRequest): Promise<any> {
 
     // If login session is found on the browser, don't let user sign-up until logged out
-    if (req.user) {
-        return customReturn({ success: false, message: 'Seems you have logged into an existing account', code: Parse.Error.OPERATION_FORBIDDEN, details: null })
-        // throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Seems you have logged into an existing account');
-    }
+    if (req.user) throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Seems you have logged into an existing account');
 
 
-    const signupSchema = z.strictObject({
-        firstName: z.string().min(1),
-        lastName: z.string().min(1),
-        email: z.string().email()
-            .refine(val => MailChecker.isValid(val))
-            .transform(val => val.toLocaleLowerCase()),
-        password: z.string().min(8),
-    })
+    // const signupSchema = z.strictObject({
+    //     firstName: z.string().min(1),
+    //     lastName: z.string().min(1),
+    //     email: z.string().email()
+    //         .refine(val => MailChecker.isValid(val))
+    //         .transform(val => val.toLocaleLowerCase()),
+    //     password: z.string().min(8),
+    // })
 
-    const result = signupSchema.safeParse(req.params)
+    const result = userSchema.safeParse(req.params)
 
     if (!result.success) {
-        return flattenZodError(result.error)
+        throw {
+            message: flattenZodError(result.error)
+        }
     }
 
     const signupData = result.data;
@@ -39,26 +48,33 @@ async function signup(req: Parse.Cloud.FunctionRequest): Promise<any> {
         const user = await Parse.User.logIn(signupData.email, signupData.password)
         return { sessionToken: user.getSessionToken() }
     } catch (error: any) {
-        return {
-            success: false,
-            details: null,
-            ...error
-        }
+        throw new Parse.Error(error.code, error.message)
     }
 }
 
-async function login(req: Parse.Cloud.FunctionRequest): Promise<Object> {
+async function login(req: Parse.Cloud.FunctionRequest): Promise<Record<string, unknown>> {
 
-    const loginSchema = {}
+    const loginSchema = z.strictObject({
+        email: z.string().email()
+            .refine(val => MailChecker.isValid(val))
+            .transform(val => val.toLocaleLowerCase()),
+        password: z.string().min(8)
+    })
 
-    const { username, email, password } = req.params
-    try {
-        const userData: User = {
-            username: username || "dummy",
-            email: email || "dummy@dummy.com",
-            password: password || "dummy"
+    const result = loginSchema.safeParse(req.params)
+
+    if (!result.success) {
+        throw {
+            message: flattenZodError(result.error)
         }
-        const user = await Parse.User.logIn(userData.username, userData.password)
+    }
+    const loginData = result.data
+    try {
+        // const userData: Partial<User> = {
+        //     email: loginData.email,
+        //     password: loginData.password
+        // }
+        const user = await Parse.User.logIn(loginData.email, loginData.password)
         return { sessionToken: user.getSessionToken() }
     } catch (error: any) {
         if (error.code === Parse.Error.USERNAME_TAKEN) throw new Parse.Error(Parse.Error.USERNAME_TAKEN, error.message)
@@ -68,17 +84,10 @@ async function login(req: Parse.Cloud.FunctionRequest): Promise<Object> {
     }
 }
 
-async function getUsers(req: Parse.Cloud.FunctionRequest): Promise<Object> {
-    const query = new Parse.Query(Parse.User)
-    const user = await query.first()
-    if (user) {
-        const result: Partial<User> = {
-            username: user.get("username"),
-            email: user.get("email")
-        }
-        return result
-    }
-    return {}
+async function getUsers(req: Parse.Cloud.FunctionRequest): Promise<Object[]> {
+    const query = new Parse.Query('_User')
+    const users = await query.findAll({ useMasterKey: true })
+    return users
 }
 
 // Cloud trigger definitions

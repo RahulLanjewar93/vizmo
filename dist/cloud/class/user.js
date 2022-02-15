@@ -31,25 +31,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const zod_1 = require("../common/zod");
 const z = __importStar(require("zod"));
 const MailChecker = __importStar(require("mailchecker"));
-const returns_1 = require("../common/returns");
+const userSchema = z.strictObject({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email()
+        .refine(val => MailChecker.isValid(val))
+        .transform(val => val.toLocaleLowerCase()),
+    password: z.string().min(8),
+});
 function signup(req) {
     return __awaiter(this, void 0, void 0, function* () {
         // If login session is found on the browser, don't let user sign-up until logged out
-        if (req.user) {
-            return (0, returns_1.customReturn)({ success: false, message: 'Seems you have logged into an existing account', code: Parse.Error.OPERATION_FORBIDDEN, details: null });
-            // throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Seems you have logged into an existing account');
-        }
-        const signupSchema = z.strictObject({
-            firstName: z.string().min(1),
-            lastName: z.string().min(1),
-            email: z.string().email()
-                .refine(val => MailChecker.isValid(val))
-                .transform(val => val.toLocaleLowerCase()),
-            password: z.string().min(8),
-        });
-        const result = signupSchema.safeParse(req.params);
+        if (req.user)
+            throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Seems you have logged into an existing account');
+        // const signupSchema = z.strictObject({
+        //     firstName: z.string().min(1),
+        //     lastName: z.string().min(1),
+        //     email: z.string().email()
+        //         .refine(val => MailChecker.isValid(val))
+        //         .transform(val => val.toLocaleLowerCase()),
+        //     password: z.string().min(8),
+        // })
+        const result = userSchema.safeParse(req.params);
         if (!result.success) {
-            return (0, zod_1.flattenZodError)(result.error);
+            throw {
+                message: (0, zod_1.flattenZodError)(result.error)
+            };
         }
         const signupData = result.data;
         const userData = {
@@ -64,21 +71,31 @@ function signup(req) {
             return { sessionToken: user.getSessionToken() };
         }
         catch (error) {
-            return Object.assign({ success: false, details: null }, error);
+            throw new Parse.Error(error.code, error.message);
         }
     });
 }
 function login(req) {
     return __awaiter(this, void 0, void 0, function* () {
-        const loginSchema = {};
-        const { username, email, password } = req.params;
-        try {
-            const userData = {
-                username: username || "dummy",
-                email: email || "dummy@dummy.com",
-                password: password || "dummy"
+        const loginSchema = z.strictObject({
+            email: z.string().email()
+                .refine(val => MailChecker.isValid(val))
+                .transform(val => val.toLocaleLowerCase()),
+            password: z.string().min(8)
+        });
+        const result = loginSchema.safeParse(req.params);
+        if (!result.success) {
+            throw {
+                message: (0, zod_1.flattenZodError)(result.error)
             };
-            const user = yield Parse.User.logIn(userData.username, userData.password);
+        }
+        const loginData = result.data;
+        try {
+            // const userData: Partial<User> = {
+            //     email: loginData.email,
+            //     password: loginData.password
+            // }
+            const user = yield Parse.User.logIn(loginData.email, loginData.password);
             return { sessionToken: user.getSessionToken() };
         }
         catch (error) {
@@ -94,16 +111,9 @@ function login(req) {
 }
 function getUsers(req) {
     return __awaiter(this, void 0, void 0, function* () {
-        const query = new Parse.Query(Parse.User);
-        const user = yield query.first();
-        if (user) {
-            const result = {
-                username: user.get("username"),
-                email: user.get("email")
-            };
-            return result;
-        }
-        return {};
+        const query = new Parse.Query('_User');
+        const users = yield query.findAll({ useMasterKey: true });
+        return users;
     });
 }
 // Cloud trigger definitions
