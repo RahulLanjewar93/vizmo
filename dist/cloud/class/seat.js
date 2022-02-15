@@ -29,18 +29,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const z = __importStar(require("zod"));
+const moment = require("moment");
 const zod_1 = require("../common/zod");
+const seatSchema = z.strictObject({
+    seatNumber: z.number(),
+    blockingId: z.literal("Pointer").optional(),
+    bookingId: z.literal("Pointer").optional(),
+    floorId: z.literal("Pointer"),
+});
 // Types Declarations
-// Parse.Cloud.define("seat:seed", seed);
-Parse.Cloud.define("seats:get", getSeats);
-Parse.Cloud.define("seats:block", blockSeats);
-Parse.Cloud.define("seats:book", bookSeats);
-Parse.Cloud.define("seats:timeout", getTimeout);
+Parse.Cloud.define("seat:seed", seed);
+Parse.Cloud.define("seat:get", getSeats);
+Parse.Cloud.define("seat:block", blockSeats);
+Parse.Cloud.define("seat:book", bookSeats);
+Parse.Cloud.define("seat:timeout", getTimeout);
 // Parse.Cloud.define("floors:get", getFloors);
 function seed(req) {
     return __awaiter(this, void 0, void 0, function* () {
         const FloorClass = new Parse.Schema("Floor");
         const SeatClass = new Parse.Schema("Seat");
+        const BlockingClass = new Parse.Schema("Blocking");
+        yield BlockingClass.purge();
         yield FloorClass.purge();
         yield SeatClass.purge();
         for (let i = 1; i <= 5; i++) {
@@ -49,22 +58,20 @@ function seed(req) {
             for (let j = 1; j <= 5; j++) {
                 const Seat = Parse.Object.extend("Seat");
                 const seat = new Seat();
-                seat.set("parent", floor);
-                seat.set("bookedTill");
+                seat.set("floor", floor);
                 const seatData = {
-                    seatNumber: j
+                    seatNumber: j,
                 };
                 yield seat.save(seatData);
             }
             const floorData = {
-                floorNumber: i
+                floorNumber: i,
             };
             yield floor.save(floorData);
         }
         return { success: true };
     });
 }
-;
 function getSeats(req) {
     return __awaiter(this, void 0, void 0, function* () {
         // Get FloorId
@@ -73,14 +80,14 @@ function getSeats(req) {
         const floor = yield floorQuery.get(floorId);
         const floorNumber = floor.get("floorNumber");
         const seatQuery = new Parse.Query("Seat");
-        seatQuery.equalTo("parent", floor);
+        seatQuery.equalTo("floor", floor);
         const data = yield seatQuery.find({ useMasterKey: true });
         const result = data.map((object, index) => {
             return {
                 id: object.id,
-                seatNumber: object.get('seatNumber'),
+                seatNumber: object.get("seatNumber"),
                 floorNumber: floorNumber,
-                blockedTill: object.get("blockedTill")
+                blockedTill: object.get("blockedTill"),
             };
         });
         return result;
@@ -96,35 +103,52 @@ function getFloors(req) {
 }
 function blockSeats(req) {
     return __awaiter(this, void 0, void 0, function* () {
-        const seatSchema = z.strictObject({
-            seatIds: z.string().array()
-        });
-        const result = seatSchema.safeParse(req.params);
-        if (!result.success) {
+        // Fetch Current, User If user is not logged in return
+        if (!req.user)
+            throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, "Please Login First");
+        // Get current date time and add 5 to it
+        const currentTime = new Date(moment().format());
+        const bookingTime = new Date(moment()
+            .add(5, "minutes")
+            .format());
+        // Check incoming data
+        const seatSchema = z.strictObject({ seatId: z.string() });
+        const inputCheck = seatSchema.safeParse(req.params);
+        if (!inputCheck.success) {
             throw {
-                message: (0, zod_1.flattenZodError)(result.error)
+                message: (0, zod_1.flattenZodError)(inputCheck.error),
             };
         }
-        // Get current date time and add 5 to it
-        const currentDateTime = new Date();
-        const blockedTill = new Date(currentDateTime);
-        blockedTill.setMinutes(blockedTill.getMinutes() + 5);
-        const data = [];
-        for (let seatId of result.data.seatIds) {
-            const seat = yield new Parse.Query('Seat').get(seatId);
-            const result = yield seat.save({
-                blockedTill: blockedTill
-            }, { useMasterKey: true });
-            data.push(result);
+        const seatData = inputCheck.data;
+        // Fetch the seat with the booking, if available
+        const seat = yield new Parse.Query("Seat")
+            .include("blockingId")
+            .get(seatData.seatId);
+        // Get the blockingId of the seat
+        const { blockingId: seatBlockingId } = seat.attributes;
+        // Booking Id found on the seat perfrom validation
+        if (seatBlockingId) {
+            return false;
         }
-        return data;
+        console.log("\n\n seat \n\n", seat);
+        // No blockingId found, create a blocking
+        const BlockingObj = Parse.Object.extend("Blocking");
+        const blocking = new BlockingObj();
+        const blockingData = {
+            blockedTill: bookingTime,
+            userId: req.user,
+            seatId: seat.id,
+        };
+        yield blocking.save(blockingData);
+        const result = yield seat.save({
+            blockingId: blocking,
+        }, { useMasterKey: true });
+        return true;
     });
 }
 function bookSeats() {
-    return __awaiter(this, void 0, void 0, function* () {
-    });
+    return __awaiter(this, void 0, void 0, function* () { });
 }
 function getTimeout() {
-    return __awaiter(this, void 0, void 0, function* () {
-    });
+    return __awaiter(this, void 0, void 0, function* () { });
 }

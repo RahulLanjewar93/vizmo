@@ -10,7 +10,7 @@ class CustomParseClientApp {
     }
 
     async seed(){
-        return await Parse.Cloud.run('seed',{data:"test"}).then(data=>console.log(data))
+        return await Parse.Cloud.run('seat:seed',{data:"test"}).then(data=>console.log(data))
     }
 
     async getFloors(){
@@ -18,7 +18,7 @@ class CustomParseClientApp {
     }
 
     async getSeats(){
-        return await Parse.Cloud.run('seats:get',{floorId:'mKadIpMZ5k'}).then(data=>console.log(data))
+        return await Parse.Cloud.run('seat:get',{floorId:'mKadIpMZ5k'}).then(data=>console.log(data))
     }
 
     async  signup(){
@@ -48,7 +48,7 @@ class CustomParseClientApp {
 
 
     async blockSeats(arg){
-        return await Parse.Cloud.run("seats:block",{seatIds:arg.seatIds}).then(data=>console.log(data))
+        return await Parse.Cloud.run("seat:block",arg).then(data=>console.log(data))
     }
 
     async startCheck(){
@@ -63,15 +63,19 @@ class CustomParseClientApp {
 
 // User 1
 const client1 = new CustomParseClientApp()
-// client1.login()
-// client1.blockSeats({seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]})
-setTimeout(client1.startCheck,5000)
-setTimeout(client1.stopCheck,10000)
+client1.login().then(()=>{
+    // client1.getSeats()
+    client1.blockSeats({seatId:"GflUtVWo85"})
+    // client1.seed()
+}
+)
+// setTimeout(client1.startCheck,5000)
+// setTimeout(client1.stopCheck,10000)
 
 // User 2
 const client2 = new CustomParseClientApp()
-client2.login()
-client2.blockSeats({seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]})
+// client2.login()
+// client2.blockSeats({seatIds:["oDGB6DSW8K","G9boHzKRQd","wrij7O6c7H"]})
 
 
 

@@ -22,6 +22,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const z = __importStar(require("zod"));
 const blockingSchema = z.strictObject({
     blockedTill: z.date(),
-    seatIds: z.array(z.literal('Pointer')),
-    userId: z.string()
+    seatId: z.literal("Pointer"),
+    userId: z.literal("Pointer"),
 });
